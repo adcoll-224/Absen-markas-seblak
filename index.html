@@ -273,7 +273,9 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
-        let isDbReady = false; let unsubscribeSnapshot = null;
+        let isDbReady = false; 
+        let unsubscribeSnapshot = null;
+        let currentRecords = []; // PENAMBAHAN VARIABEL UNTUK EXPORT
 
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
@@ -300,12 +302,12 @@
             }
         });
 
-        // PROSES LOGIN DENGAN ID (Otomatis ditambah @seblak.com)
+        // PROSES LOGIN DENGAN ID
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const idPegawai = document.getElementById('idInput').value.trim();
             const password = document.getElementById('passwordInput').value;
-            const emailFormat = idPegawai + "@seblak.com"; // Trik ID
+            const emailFormat = idPegawai + "@seblak.com"; 
             
             const btnSubmit = document.getElementById('btnLoginSubmit');
             btnSubmit.disabled = true; btnSubmit.innerHTML = `<i class="ph ph-spinner animate-spin text-lg"></i> Memproses...`;
@@ -340,10 +342,19 @@
             unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
                 loadingState.classList.add('hidden');
                 Array.from(tableBody.children).forEach(child => { if(child.id !== 'emptyState' && child.id !== 'loadingState') child.remove(); });
-                if (snapshot.empty) { emptyState.classList.remove('hidden'); return; } else { emptyState.classList.add('hidden'); }
+                if (snapshot.empty) { 
+                    emptyState.classList.remove('hidden'); 
+                    currentRecords = []; // Kosongkan data
+                    return; 
+                } else { 
+                    emptyState.classList.add('hidden'); 
+                }
 
                 const records = []; snapshot.forEach((doc) => records.push({ id: doc.id, ...doc.data() }));
                 records.sort((a, b) => b.timestamp - a.timestamp);
+                
+                currentRecords = records; // SIMPAN DATA KE VARIABEL UNTUK EXPORT
+
                 records.forEach(record => {
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-orange-50/40 transition-colors border-b border-orange-50 last:border-0';
@@ -379,19 +390,4 @@
             document.getElementById('submitText').textContent = "Menyimpan ke DB..."; overlay.classList.remove('hidden'); overlay.classList.add('flex');
 
             const now = new Date(); const currentDateString = getLocalDateString();
-            const timeOnly = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).replace(/\./g, ':');
-            const dataToSave = { nama: nameInput, status: statusInput, tanggal: currentDateString, waktu: timeOnly, timestamp: now.getTime(), foto: getCompressedSelfie() };
-
-            try {
-                await addDoc(collection(db, "absensi"), dataToSave);
-                document.getElementById('employeeName').value = ''; document.querySelector('input[name="status"][value="Hadir"]').checked = true;
-                const filterInput = document.getElementById('filterDate');
-                if(filterInput.value !== currentDateString) { filterInput.value = currentDateString; fetchDataByDate(currentDateString); }
-                window.showToast("Tersimpan!", `Absensi ${nameInput} berhasil masuk.`);
-            } catch (error) { window.showToast("Gagal", "Tidak dapat menyimpan data.", "error"); } 
-            finally { enableForm(); overlay.classList.add('hidden'); overlay.classList.remove('flex'); }
-        });
-    </script>
-</body>
-</html>
-
+            const timeOnly = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-
